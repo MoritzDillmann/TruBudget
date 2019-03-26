@@ -1,4 +1,5 @@
 import isEqual = require("lodash.isequal");
+import clone = require("lodash.clonedeep");
 
 import Intent from "../../../authz/intents";
 import { Ctx } from "../../../lib/ctx";
@@ -12,6 +13,7 @@ import { ServiceUser } from "../organization/service_user";
 import * as Project from "./project";
 import * as Subproject from "./subproject";
 import * as SubprojectPermissionGranted from "./subproject_permission_granted";
+import logger from "../../../lib/logger";
 
 interface Repository {
   getSubproject(
@@ -53,15 +55,21 @@ export async function grantSubprojectPermission(
   }
 
   // Check that the new event is indeed valid:
-  const updatedSubproject = SubprojectPermissionGranted.apply(ctx, permissionGranted, subproject);
+  const updatedSubproject = SubprojectPermissionGranted.apply(
+    ctx,
+    permissionGranted,
+    clone(subproject),
+  );
   if (Result.isErr(updatedSubproject)) {
     return new InvalidCommand(ctx, permissionGranted, [updatedSubproject]);
   }
 
+  logger.fatal("domain level");
   // Only emit the event if it causes any changes to the permissions:
   if (isEqual(subproject.permissions, updatedSubproject.permissions)) {
     return { newEvents: [] };
   } else {
+    logger.fatal("domain level2");
     return { newEvents: [permissionGranted] };
   }
 }
